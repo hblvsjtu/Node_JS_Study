@@ -4,7 +4,10 @@
 ------        
         
 ### 作者：冰红茶  
-### 参考书籍：《深入浅出node.js》 朴灵   
+### 参考书籍：《深入浅出node.js》 朴灵  
+## 参考源：[Node：https://nodejs.org/en/](https://nodejs.org/en/)
+## 参考源：[Node API文档：https://nodejs.org/dist/latest-v10.x/docs/api/](https://nodejs.org/dist/latest-v10.x/docs/api/)
+
             
 ------    
             
@@ -18,6 +21,10 @@
 ### [1.1 两个为什么](#1.1)
 ### [1.2 Node对JS的意义](#1.2)   
 ### [1.3 Node的特点](#1.3)
+## [二、网络编程](#2)
+### [2.1 简介](#2.1)
+### [2.2 构建TCP服务器](#2.2)   
+### [2.3 构建HTTP服务](#2.3)
   
 ------      
         
@@ -65,3 +72,134 @@
 > - CPU密集型 I/O阻塞造成的性能消耗比远比CPU小，而且Node异步I/O已经解决了在单线程上CPU与I/O之间阻塞无法重叠利用的问题；
 > - 虽然Node没有提供多线程用于计算，但是还是有办法去充分利用CPU，第一种办法是利编写C/C++拓展的方式，将V8不能 做到极致的地方通过C/C++来实现；第二种方式是通过子进程child_process的方式，将一部分Node进程当作常驻服务进程 用于计算，利用进程间消息来传递结果，将计算和I/O分离
 > - “CPU密集并不可怕，如何合理调度是诀窍”
+          
+------      
+        
+        
+<h2 id='2'> 二、网络编程</h2>
+<h3 id='2.1'>2.1 简介</h3>  
+        
+#### 1) 网络服务器
+> - ASP和ASP.net需要IIS作为服务器
+> - PHP需要Apache或者Nginx作为服务器
+> - JSP需要Tomcat作为服务器
+> - 但是Node自己就可以搭建服务器，不需要额外的容器 
+#### 2) Node提供的服务器模块
+> - net -> TCP 
+> - dgam -> UDP
+> - http -> HTTP
+> - https -> HTTPS
+#### 3) OSI 7层模型
+> - 物理层
+> - 链路层
+> - 网络层 IP
+> - 运输层 TCP/UDP
+> - 会话层（五层模型没有的）通讯连接/维持会话
+> - 表示层（五层模型没有的）用来解谜/加密
+> - 应用层 HTTP、SMTP、IMAP
+    
+<h3 id='2.2'>2.2 构建TCP服务器</h3>  
+        
+#### 1) 网络服务器 net模块
+> - The net module provides an asynchronous network API for creating stream-based TCP or IPC servers (net.createServer()) and clients (net.createConnection()).
+#### 2) 基本网络工具 telnet
+> - [Telnet协议是TCP/IP协议族中的一员，是Internet远程登陆服务的标准协议和主要方式。它为用户提供了在本地计算机上完成远程主机工作的能力。在终端使用者的电脑上使用telnet程序，用它连接到服务器。终端使用者可以在telnet程序中输入命令，这些命令会在服务器上运行，就像直接在服务器的控制台上输入一样。可以在本地就能控制服务器。要开始一个telnet会话，必须输入用户名和密码来登录服务器。Telnet是常用的远程控制Web服务器的方法。--百度百科](https://baike.baidu.com/item/Telnet/810597?fr=aladdin)
+> - 用途
+>> - Escape character is '^]' ^表示【ctrl】这一行命令表示退出telnet的命令输入
+>> - quit表示退出telnet终端
+>> - close关闭当前连接
+>> - logout强制退出远程用户并关闭连接
+>> - display显示当前操作的参数
+>> - mode试图进入命令行方式或字符方式
+>> - open连接到某一站点
+>> - quit退出
+>> - telnetsend发送特殊字符
+>> - set设置当前操作的参数
+>> - unset复位当前操作参数
+>> - status打印状态信息
+>> - toggle对操作参数进行开关转换
+>> - slc改变特殊字符的状态
+>> - auth打开/关闭确认功能z挂起
+>> - telnetenviron更改环境变量?显示帮助信息
+>> - 启动服务器，用telnet 去查看这个端口是否可用
+                
+                // 安装
+                brew install telnet
+
+                // 使用：
+                telnet 114.80.67.193 8080               
+#### 3) 服务器事件EventEmitter实例回调函数
+> - listening：在server.listen(port, callback)绑定端口或者Domin Socket后触发
+                
+                server.listen(8124, () => {
+                    console.log('server bound');
+                });
+> - connection: const server = net.createServer(callback(socket))
+> - close: server.close([callback])后触发
+> - error: 产生错误时触发，一般使用on来监测
+                
+                server.on('error', (err) => {
+                    throw err;
+                });
+#### 4) 连接事件 socket.on(type, callback)
+> - data
+> - on
+> - connect
+> - error
+> - close
+> - timeout
+> - socket.write() 给client发送可写可读的Stream对象
+#### 5) 实例
+> - tcp.js
+                
+                const net = require('net');
+                const server = net.createServer((socket) => {
+                    // 'connection' listener
+                    console.log('client connected');
+
+                    // 给client发送
+                    socket.write('hello\r\n');
+
+                    socket.on('data', (data) => {
+                        console.log(`data=${data}`);
+                    });
+                    socket.on('end', () => {
+                        console.log('client disconnected');
+                    });
+
+                    // 设置超时时间
+                    socket.setTimeout(3000);
+                    socket.on('timeout', () => {
+                        console.log('socket timeout');
+                        socket.end();
+                    });
+                });
+
+                server.on('error', (err) => {
+                    throw err;
+                });
+
+                server.listen(8124, () => {
+                    console.log('server bound');
+                });
+>>>>>> ![图2-1 telnet与tcp连接]()
+        
+    
+<h3 id='2.3'>2.3 构建HTTP服务</h3>  
+        
+#### 1) 网络服务器 http模块
+> - TCP和UDP都属于网络传输层协议，如果要构建高效的网络应用，就应该从应用层着手
+> - 在Node中，HTTP服务继承自TCP服务器，他能够与多个客户端保持连接，由于采用事件驱动的方式，并不为每一个连接创建额外的线程或者进程，保持着很低的内存占用，并能实现高并发。
+> - TCP服务以connect为单位进行服务，而HTTP服务则以request为单位进行服务
+> - http模块即是将connection到request的过程进行了封装
+> - socket.write() -> ServerRequest对象
+> - socket.on('data',callback) -> ServerResponse对象
+> - HTTP请求对象和HTTP响应对象是相对较底层的封装，现在的Connect和Express都是在这两个对象的基础上进行高层封装完成的
+#### 2) http模块的请求
+> - 
+> - 
+> - 
+> - 
+> - 
+> - 
+> - 
