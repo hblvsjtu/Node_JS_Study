@@ -29,7 +29,16 @@
 ### [3.1 简介](#3.1)
 ### [3.2 构建TCP服务器](#3.2)   
 ### [3.3 构建HTTP服务](#3.3)
-  
+## [四、构建Web应用](#4)
+### [4.1 简介](#4.1)
+### [4.2 请求方法与路径解析](#4.2)   
+### [4.3 URL中查询字符串的解析与Cookies解析](#4.3)
+## [五、相关API的使用](#5)
+### [5.1 url](#5.1)
+### [5.2 querystring](#5.2)
+### [5.3 stream模块](#5.3)
+### [5.4 fs模块](#5.4)
+          
 ------      
         
         
@@ -222,6 +231,7 @@
 
                 // 输出: 1
                 console.log(buf2.compare(buf3));
+
           
 ------      
         
@@ -417,70 +427,6 @@
 > - Connect
 > - upgrade
 > - continue
-#### 5) url
-> - url.parse(urlString[, parseQueryString[, slashesDenoteHost]]) 
->> - url.parse() 方法会解析一个 URL 字符串并返回一个 URL 对象
->> - parseQueryString < boolean> 如果为 true，则 query 属性总会通过 querystring 模块的 parse() 方法生成一个对象urlObject。 如果为 false，则返回的 URL 对象上的 query 属性会是一个未解析、未解码的字符串。 默认为 false。
-> -  urlObject
->> - urlObject.auth
->> - urlObject.hash
->> - urlObject.host
->> - urlObject.hostname
->> - urlObject.href
->> - urlObject.path
->> - urlObject.pathname
->> - urlObject.port
->> - urlObject.protocol
->> - urlObject.query
->> - urlObject.search
->> - urlObject.slashes  
-                
-                Url {
-                  protocol: null,
-                  slashes: null,
-                  auth: null,
-                  host: null,
-                  port: null,
-                  hostname: null,
-                  hash: null,
-                  search: '?name=ryan',
-                  query: 'name=ryan',
-                  pathname: '/status',
-                  path: '/status?name=ryan',
-                  href: '/status?name=ryan' }
-> - url.resolve(from, to)
->> - from < string> 解析时相对的基本 URL。
->> - to < string> 要解析的超链接 URL。
-                
-                const url = require('url');
-                url.resolve('/one/two/three', 'four');         // '/one/two/four'
-                url.resolve('http://example.com/', '/one');    // 'http://example.com/one'
-                url.resolve('http://example.com/one', '/two'); // 'http://example.com/two'
-#### 6) querystring
-> - querystring 模块提供了一些实用函数，用于解析与格式化 URL 查询字符串。 可以通过以下方式使用
-                
-                const querystring = require('querystring'); 
-> - querystring.parse(str\[, sep\[, eq\[, options\]\]\])
->> - str < string> 要解析的 URL 查询字符串。
->> - sep < string> 用于界定查询字符串中的键值对的子字符串。默认为 '&'。
->> - eq < string> 用于界定查询字符串中的键与值的子字符串。默认为 '='。
->> - options < Object>
->>> - decodeURIComponent < Function> 解码查询字符串的字符时使用的函数。默认为 querystring.unescape()。
->>> - maxKeys < number> 指定要解析的键的最大数量。指定为 0 则不限制。默认为 1000。
-                
-                // 例如：查询字符串 'foo=bar&abc=xyz&abc=123' 被解析成：
-
-                {
-                  foo: 'bar',
-                  abc: ['xyz', '123']
-                }
-> - querystring.stringify(obj\[, sep\[, eq\[, options\]\]\])#
-                
-                querystring.stringify({ foo: 'bar', baz: ['qux', 'quux'], corge: '' });
-                // 返回 'foo=bar&baz=qux&baz=quux&corge='
-
-                querystring.stringify({ foo: 'bar', baz: 'qux' }, ';', ':');
-                // 返回 'foo:bar;baz:qux'
 #### 7) 例子
 > - httpserver.js                
                 
@@ -673,3 +619,196 @@
                   98%    570
                   99%    570
                  100%    570 (longest request)
+
+          
+------      
+        
+<h2 id='4'>四、构建Web应用</h2>
+<h3 id='4.1'>4.1 简介</h3>  
+        
+#### 1) 需求
+> - 请求方法的判断
+> - URL的路径解析
+> - URL中查询字符串的解析
+> - Cookies大的解析
+> - Basic的认证
+> - 表单数据的解析
+> - 任意格式文件的上传处理
+#### 2) 框架 = 创建服务器 + 回调函数
+> - 创建服务器
+                
+                http.createServer(callback).listen(8124);
+> - 回调函数
+                    
+                const callback = function(req, res) {
+                    res.writeHead(200, {'Content-Type': 'text/plain'});
+                    res.end();
+                }
+
+                //或者使用express 或者 connect
+                const callback = express();
+
+                const callback = connect();
+
+<h3 id='4.2'>4.2 请求方法与路径解析</h3>  
+        
+#### 1) 请求方法
+> - GET 查看一个资源 C
+> - R
+> - POST 更新一个资源 U
+> - PUT 新建一个资源 U
+> - DELETE 删除一个资源 D
+                
+                function(req, res) {
+                    switch req.method {
+                        case "POST":
+                            update(req, res);
+                            break;
+                        case "DELETE":
+                            delete(req, res);
+                            break;
+                        case "PUT":
+                            create(req, res);
+                            break;
+                        case "GRT":
+                        default:
+                            get(req, res);
+                    }    
+                }
+#### 2) 路径解析
+> - 使用url包
+> - 使用url.parse(req.url, true)获得URL对象
+        
+<h3 id='4.3'>4.3 URL中查询字符串的解析与Cookies大的解析</h3>  
+        
+#### 1) URL中查询字符串的解析
+> - 首先获得url对象
+> - 然后获得query对象
+                
+                const url = require('url');
+                const querystring = require('querystring');
+                
+                const query = querystring.parse(url.parse(req.url).query);
+
+                // 或者直接放进URL对象
+                const query = url.parse(req.url, true).query;
+
+#### 2) Cookies的解析
+> - 形式：key1=value1;key2=value2
+> - 设置：response.setHeader('Set-Cookie', ['type=ninja', 'language=javascript']);
+> - 自制解析函数 parseCookie()
+        function parseCookie(cookie) {
+            let cookies = {};
+            if (!cookie) {
+                return cookies;
+            } else {
+                let list = cookie.split(';');
+                let i;
+                let length = list.length;
+                for (i = 0; i < length; i++) {
+                    let pair = list[i].split('=');
+                    let key = pair[0].trim();
+                    let name = pair[1].trim();
+                    cookies[key] = name;
+                }
+                return cookies;
+            }
+        }
+> - 性能影响
+>> - 减少Cookie的大小 一旦设置的Cookie过多，就会导致报头过大，而且大多数的cookie并不需要每次都用上，因此会造成带宽上的浪费
+>> - 为静态组件使用不同的域名，因为域名不同，就不会每次都用上相同的cookie。但是这样会牺牲DNS查询的性能和时间，好在现代的浏览器会进行DNS缓存，把这个冲突的副作用降到最低。
+        
+<h3 id='4.4'>4.4 session与缓存</h3>  
+        
+#### 1) session
+> - 由于cookie在客户端（document.cookie）和服务器端都能够被修改，所以很容易被一些坏人利用，敏感的数据都不大好放在Cookies上
+> - 而session只存放在服务器端，可避免被客户端修改
+#### 2) 客户端与服务器端session的对应方式
+> - 基于Cookie来实现用户和数据的映射  cookie携带Session的口令session_id
+> - 通过查询字符串来实现浏览器端和服务器端数据的对应
+
+          
+------      
+        
+<h2 id='5'>五、其他API</h2>
+        
+<h3 id='5.1'>5.1 url</h3>  
+        
+#### 1) url.parse(urlString[, parseQueryString[, slashesDenoteHost]]) 
+> - url.parse() 方法会解析一个 URL 字符串并返回一个 URL 对象
+> - parseQueryString < boolean> 如果为 true，则 query 属性总会通过 querystring 模块的 parse() 方法生成一个对象urlObject。 如果为 false，则返回的 URL 对象上的 query 属性会是一个未解析、未解码的字符串。 默认为 false。
+#### 2) urlObject
+> - urlObject.auth
+> - urlObject.hash
+> - urlObject.host
+> - urlObject.hostname
+> - urlObject.href
+> - urlObject.path
+> - urlObject.pathname
+> - urlObject.port
+> - urlObject.protocol
+> - urlObject.query
+> - urlObject.search
+> - urlObject.slashes  
+                
+                Url {
+                  protocol: null,
+                  slashes: null,
+                  auth: null,
+                  host: null,
+                  port: null,
+                  hostname: null,
+                  hash: null,
+                  search: '?name=ryan',
+                  query: 'name=ryan',
+                  pathname: '/status',
+                  path: '/status?name=ryan',
+                  href: '/status?name=ryan' }
+#### 3) url.resolve(from, to)
+> - from < string> 解析时相对的基本 URL。
+> - to < string> 要解析的超链接 URL。
+                
+                const url = require('url');
+                url.resolve('/one/two/three', 'four');         // '/one/two/four'
+                url.resolve('http://example.com/', '/one');    // 'http://example.com/one'
+                url.resolve('http://example.com/one', '/two'); // 'http://example.com/two'
+
+        
+<h3 id='5.2'>5.2 querystring</h3>  
+        
+#### 1) 安装
+> - querystring 模块提供了一些实用函数，用于解析与格式化 URL 查询字符串。 可以通过以下方式使用
+                
+                const querystring = require('querystring'); 
+#### 2) querystring.parse(str\[, sep\[, eq\[, options\]\]\])
+> - str < string> 要解析的 URL 查询字符串。
+> - sep < string> 用于界定查询字符串中的键值对的子字符串。默认为 '&'。
+> - eq < string> 用于界定查询字符串中的键与值的子字符串。默认为 '='。
+> - options < Object>
+>> - decodeURIComponent < Function> 解码查询字符串的字符时使用的函数。默认为 querystring.unescape()。
+>> - maxKeys < number> 指定要解析的键的最大数量。指定为 0 则不限制。默认为 1000。
+                
+                // 例如：查询字符串 'foo=bar&abc=xyz&abc=123' 被解析成：
+
+                {
+                  foo: 'bar',
+                  abc: ['xyz', '123']
+                }
+#### 3) querystring.stringify(obj\[, sep\[, eq\[, options\]\]\])#
+                
+                querystring.stringify({ foo: 'bar', baz: ['qux', 'quux'], corge: '' });
+                // 返回 'foo=bar&baz=qux&baz=quux&corge='
+
+                querystring.stringify({ foo: 'bar', baz: 'qux' }, ';', ':');
+                // 返回 'foo:bar;baz:qux'
+ 
+
+<h3 id='5.3'>5.3 stream</h3>  
+        
+#### 1) url
+> - 
+              
+<h3 id='5.4'>5.4 fs</h3>  
+        
+#### 1) url
+> - 

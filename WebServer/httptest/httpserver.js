@@ -9,12 +9,31 @@
 const http = require('http');
 const url = require('url');
 
+function parseCookie(cookie) {
+	let cookies = {};
+	if (!cookie) {
+		return cookies;
+	} else {
+		let list = cookie.split(';');
+		let i;
+		let length = list.length;
+		for (i = 0; i < length; i++) {
+			let pair = list[i].split('=');
+			let key = pair[0].trim();
+			let name = pair[1].trim();
+			cookies[key] = name;
+		}
+		return cookies;
+	}
+}
+
 //创建http server
 const server = http.createServer((req, res) => {
 
 	// 设置响应头
 	res.setHeader('Content-Type', 'text/html');
 	res.setHeader('X-Foo', 'bar');
+	res.setHeader('Set-Cookie', ['system=Mac', 'tool=node']);
 	res.writeHead(200, {
 		'Content-Type': 'text/plain'
 	});
@@ -31,6 +50,13 @@ const server = http.createServer((req, res) => {
 	console.log(`req.url = ${req.url}`);
 	console.log(`req.method = ${req.method}`);
 	console.log(`req.httpVersions = ${req.httpVersions}`);
+
+	// 打印cookie
+	console.log('\n\r打印cookie...');
+	const cookie = parseCookie(header.cookie);
+	for (let key in cookie) {
+		console.log(`${key} = ${cookie[key]}`);
+	}
 
 	// 打印IP地址
 	const ip = res.socket.remoteAddress;
