@@ -72,11 +72,28 @@ const server = http.createServer((req, res) => {
 	for (let props in param) {
 		console.log(`${props} = ${param[props]}`);
 	}
-	// 设置超时时间3min 3*60*1000=18000
-	res.setTimeout(18000);
-	res.on('timeout', () => console.log('oh no! timeout'));
 
-	res.end('ok');
+	let chunks = [];
+	// 打印请求数据包
+	req.on('data', (chunk) => {
+		chunks.push(chunk);
+	});
+
+	req.on('end', () => {
+		console.log(`打印请求数据包: ${chunks}`);
+	});
+
+	req.on('error', () => {
+		console.log(`error: ${error}`);
+	});
+
+	// 设置超时时间5s 5*1000=5000
+	res.setTimeout(5000);
+	res.on('timeout', () => {
+		console.log('oh no! timeout');
+		res.end('ok');
+	});
+
 });
 
 // http协议升级时使用

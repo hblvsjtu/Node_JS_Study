@@ -441,12 +441,31 @@
                 const http = require('http');
                 const url = require('url');
 
+                function parseCookie(cookie) {
+                    let cookies = {};
+                    if (!cookie) {
+                        return cookies;
+                    } else {
+                        let list = cookie.split(';');
+                        let i;
+                        let length = list.length;
+                        for (i = 0; i < length; i++) {
+                            let pair = list[i].split('=');
+                            let key = pair[0].trim();
+                            let name = pair[1].trim();
+                            cookies[key] = name;
+                        }
+                        return cookies;
+                    }
+                }
+
                 //创建http server
                 const server = http.createServer((req, res) => {
 
                     // 设置响应头
                     res.setHeader('Content-Type', 'text/html');
                     res.setHeader('X-Foo', 'bar');
+                    res.setHeader('Set-Cookie', ['system=Mac', 'tool=node']);
                     res.writeHead(200, {
                         'Content-Type': 'text/plain'
                     });
@@ -464,6 +483,13 @@
                     console.log(`req.method = ${req.method}`);
                     console.log(`req.httpVersions = ${req.httpVersions}`);
 
+                    // 打印cookie
+                    console.log('\n\r打印cookie...');
+                    const cookie = parseCookie(header.cookie);
+                    for (let key in cookie) {
+                        console.log(`${key} = ${cookie[key]}`);
+                    }
+
                     // 打印IP地址
                     const ip = res.socket.remoteAddress;
                     const port = res.socket.remotePort;
@@ -478,11 +504,28 @@
                     for (let props in param) {
                         console.log(`${props} = ${param[props]}`);
                     }
-                    // 设置超时时间3min 3*60*1000=18000
-                    res.setTimeout(18000);
-                    res.on('timeout', () => console.log('oh no! timeout'));
 
-                    res.end('ok');
+                    let chunks = [];
+                    // 打印请求数据包
+                    req.on('data', (chunk) => {
+                        chunks.push(chunk);
+                    });
+
+                    req.on('end', () => {
+                        console.log(`打印请求数据包: ${chunks}`);
+                    });
+
+                    req.on('error', () => {
+                        console.log(`error: ${error}`);
+                    });
+
+                    // 设置超时时间5s 5*1000=5000
+                    res.setTimeout(5000);
+                    res.on('timeout', () => {
+                        console.log('oh no! timeout');
+                        res.end('ok');
+                    });
+
                 });
 
                 // http协议升级时使用
@@ -545,8 +588,7 @@
                     })
                 });
 
-                req.setHeader('Content-Type', 'application/json');
-                req.write('hello,here is client!', 'utf8');
+                req.write(postData, 'utf8');
                 req.end();
 
                 req.on('information', (res) => {
@@ -1059,3 +1101,126 @@
                     console.log(`文件属性: ${JSON.stringify(stats)}`);
                     console.log(`文件大小为：${stats.size}Byte`);
                 });                  
+#### 10) 例子
+> -  streamserver.js
+                
+                /**
+                 * 
+                 * @authors Lv Hongbin (hblvsjtu@163.com)
+                 * @date    2018-06-21 11:02:19
+                 * @version 1.0.0
+                 * @description test for stream on the server
+                 */
+
+                const http = require('http');
+                const stream = require('stream');
+                const fs = require('fs');
+
+                const server = http.createServer((req, res) => {
+                    // req 是 http.IncomingMessage 的实例，这是一个 Readable Stream
+                    // res 是 http.ServerResponse 的实例，这是一个 Writable Stream
+
+                    console.log('已连接！');
+                    console.log(`请求头: ${JSON.stringify(req.headers)}`);
+
+                    let body = '';
+                    // 接收数据为 utf8 字符串，
+                    // 如果没有设置字符编码，将接收到 Buffer 对象。
+                    //req.setEncoding('utf8');
+
+                    // 如果监听了 'data' 事件，Readable streams 触发 'data' 事件 
+                    req.on('data', (chunk) => {
+                        body += chunk;
+                    });
+
+                    req.on('end', () => {
+                        console.log(body);
+                    });
+
+                    req.on('error', (err) => {
+                        console.log(`err: ${err}`);
+                    })
+
+                    // 设置超时时间5S 5S*1000=S
+                    res.setTimeout(5000);
+                    res.on('timeout', () => {
+                        console.log('oh no! timeout');
+                        res.end();
+                    });
+
+                    const readStream = fs.createReadStream('1.txt');
+                    readStream.on('data', (chunk) => {
+                        res.write(chunk);
+                    })
+
+                });
+
+                server.listen(8124, () => console.log('i am listening!'));
+
+                // $ curl localhost:1337 -d "{}"
+                // object
+                // $ curl localhost:1337 -d "\"foo\""
+                // string
+                // $ curl localhost:1337 -d "not json"
+                // error: Unexpected token o in JSON at position 1
+> -  streamclient.js
+                
+                /**
+                 * 
+                 * @authors Lv Hongbin (hblvsjtu@163.com)
+                 * @date    2018-06-21 11:02:19
+                 * @version 1.0.0
+                 * @description test for stream on the client
+                 */
+
+                const http = require('http');
+                const querystring = require('querystring');
+                const fs = require('fs');
+
+                const postData = querystring.stringify({
+                    'msg': 'Hello World!'
+                });
+
+                var options = {
+                    hostname: '127.0.0.1',
+                    port: 8124,
+                    path: '/?name=lvhongbin&sex=male',
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Content-Length': Buffer.byteLength(postData) // 限制发送的字节长度
+                    }
+                }
+
+                const req = http.request(options, (res) => {
+                    console.log('已连接！');
+                    console.log(`状态码: ${res.statusCode}`);
+                    console.log(`响应头: ${JSON.stringify(res.headers)}`);
+                    var chunks = [];
+                    res.on('data', function(chunk) {
+                        chunks.push(chunk);
+                    });
+
+                    res.on('end', function() {
+                        const buf = Buffer.concat(chunks);
+                        console.log(buf.toString());
+                        console.log(`the text size = ${Buffer.byteLength(buf)} Byte`);
+                    })
+
+                    req.on('error', (err) => {
+                        console.log(`err: ${err}`);
+                    })
+                });
+
+                const chunk = Buffer.from(postData);
+                if (req.write(chunk) == false) {
+                    console.log('传送失败！');
+                };
+                req.end();
+
+                req.once('response', (res) => {
+                    const ip = req.socket.localAddress;
+                    const port = req.socket.localPort;
+                    console.log(`你的IP地址是 ${ip}，你的源端口是 ${port}。`);
+                    // consume response object
+                });

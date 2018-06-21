@@ -37,8 +37,7 @@ const req = http.request(options, (res) => {
 	})
 });
 
-req.setHeader('Content-Type', 'application/json');
-req.write('hello,here is client!', 'utf8');
+req.write(postData, 'utf8');
 req.end();
 
 req.on('information', (res) => {
