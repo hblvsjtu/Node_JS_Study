@@ -805,10 +805,257 @@
 
 <h3 id='5.3'>5.3 stream</h3>  
         
-#### 1) url
-> - 
+#### 1) 简介
+> - 流（stream）在 Node.js 中是处理流数据的抽象接口（abstract interface）
+> - 流可以是可读的、可写的，或是可读写的。所有的流都是 EventEmitter 的实例
+> - 例如， HTTP 请求 和 process.stdout 就都是流的实例
+#### 2）引入
+                
+                const stream = require('stream');
+#### 3）流的类型
+> - Readable - 可读的流 (例如 fs.createReadStream()).
+> - Writable - 可写的流 (例如 fs.createWriteStream()).
+> - Duplex - 可读写的流 (例如 net.Socket).
+> - Transform - 在读写过程中可以修改和变换数据的 Duplex 流 (例如 zlib.createDeflate())
+#### 4）缓冲
+> - Writable 和 Readable 流都会将数据存储到内部的缓冲器（buffer）中。这些缓冲器可以 通过相应的 writable._writableState.getBuffer() 或 readable._readableState.buffer 来获取。
+> - 缓冲器的大小取决于传递给流构造函数的 highWaterMark 选项。 对于普通的流， highWaterMark 选项指定了总共的字节数。对于工作在对象模式的流， highWaterMark 指定了对象的总数。
+#### 5）可读流
+> - 可读流（Readable streams）是对提供数据的 源头 （source）的抽象
+>> - HTTP responses, on the client
+>> - HTTP requests, on the server
+>> - fs read streams
+>> - zlib streams
+>> - crypto streams
+>> - TCP sockets
+>> - child process stdout and stderr
+>> - process.stdin
+> - on 事件类型
+>> - close 'close' 事件将在流或其底层资源（比如一个文件）关闭后触发。'close' 事件触发后，该流将不会再触发任何事件。
+>> - data
+>> - end 
+>> - error
+>> - readable
+> - 两种模式  
+>> - 在 flowing 模式下， 可读流自动从系统底层读取数据，并通过 EventEmitter 接口的事件尽快将数据提供给应用。
+>> - 在 paused 模式下，必须显式调用 stream.read() 方法来从流中读取数据片段。
+> - 可以通过下面三种途径切换到 flowing 模式
+>> - 监听 'data' 事件。
+>> - 调用 stream.resume() 方法。
+>> - 调用 stream.pipe() 方法将数据发送到 Writable。 
+> - 可以通过下面两种途径切换到 paused 模式
+>> - 如果不存在管道目标（pipe destination），可以通过调用 stream.pause() 方法实现。
+>> - 如果存在管道目标，可以通过取消 'data' 事件监听，并调用 stream.unpipe() 方法移除所有管道目标来实现。  
+#### 6）可写流
+> - 可写流是对数据写入'目的地'的一种抽象。
+>> - HTTP requests, on the client
+>> - HTTP responses, on the server
+>> - fs write streams
+>> - zlib streams
+>> - crypto streams
+>> - TCP sockets
+>> - child process stdin
+>> - process.stdout, process.stderr
+> - pipe 与 unpipe 管道的用法
+                
+                const writer = getWritableStreamSomehow();
+                const reader = getReadableStreamSomehow();
+                writer.on('unpipe', (src) => {
+                  console.error('Something has stopped piping into the writer.');
+                  assert.equal(src, reader);
+                });
+                reader.pipe(writer);
+                reader.unpipe(writer);
+#### 7) 文件流的用法 
+> - 创建读写流
+            
+                // 读
+                var readStream = fs.createReadStream('./1.txt');
+
+                // 写
+                var writeStream = fs.createWriteStream('./2.txt');
+> - 监视流的事件
+                
+                readStream.on('data', (chunk) => {
+                    writeStream.write(chunk);
+                });           
+> - 举例子
+                
+                const fs = require('fs');
+                var readStream = fs.createReadStream('./1.txt');
+                var writeStream = fs.createWriteStream('./2.txt');
+
+                // 处理update事件
+                readStream.on('data', (chunk) => {
+                    if(writeStream.write(chunk) == false) {
+                        readStream.pause();
+                    };
+                });
+
+                // 处理再次写入的事件
+                writeStreamre.on('train', () => {
+                    readStream.resume();
+                })
+
+                // 处理结束事件
+                readStream.on('end', () => {
+                    writeStream.end();
+                });
+
+                // 处理错误
+                readStream.on('error', function(error){
+                    console.log(error);
+                });
               
 <h3 id='5.4'>5.4 fs</h3>  
         
-#### 1) url
-> - 
+#### 1) fs - 文件系统
+> - const fs = require('fs');
+> - 所有的文件系统操作都有异步和同步两种形式
+#### 2) 异步操作用法
+> - 注意，异步的方法不能保证执行顺序。 所以下面的例子可能会出错，因为 fs.stat() 操作可能在 fs.rename() 操作之前完成
+> - 在繁忙的进程中，建议使用函数的异步版本。 同步的方法会阻塞整个进程，直到完成（停止所有连接）。
+> - 大多数 fs 函数可以省略回调函数，在这种情况下，会使用默认的回调函数。 若要追踪最初的调用点，可设置 NODE_DEBUG 环境变量：
+> - 不建议省略异步函数的回调函数，未来的版本可能会导致抛出错误
+                
+
+                fs.rename('/tmp/hello', '/tmp/world', (err) => {
+                  if (err) throw err;
+                  console.log('重命名完成');
+                });
+                fs.stat('/tmp/world', (err, stats) => {
+                  if (err) throw err;
+                  console.log(`文件属性: ${JSON.stringify(stats)}`);
+                });
+
+                // 若想按正确的顺序执行操作，则需要把 fs.stat() 放到 fs.rename() 操作的回调函数中：
+                fs.rename('/tmp/hello', '/tmp/world', (err) => {
+                  if (err) throw err;
+                  fs.stat('/tmp/world', (err, stats) => {
+                    if (err) throw err;
+                    console.log(`文件属性: ${JSON.stringify(stats)}`);
+                  });
+                });
+#### 3) 利用文件的打开检测可读可写性 fs.open
+> - 可读
+                
+                fs.open('1.txt', 'r', (err, fd) => {
+                  if (err) {
+                    if (err.code === 'ENOENT') {
+                      console.error('文件不存在');
+                      return;
+                    }
+
+                    throw err;
+                  }
+
+                  //readMyData(fd);
+                  console.log('文件可读');
+                });
+> - 可写
+                    
+                fs.open('1.txt', 'wx', (err, fd) => {
+                  if (err) {
+                    if (err.code === 'EEXIST') {
+                      console.error('文件已存在');
+                      return;
+                    }
+
+                    throw err;
+                  }
+
+                  //writeMyData(fd);
+                  console.log('文件可写');
+                });
+>> - 大部分 fs 操作接受字符串、Buffer、或使用 file: 协议的 URL 对象作为文件路径，可以使用绝对路径或者相对路径
+>> - 相对路径会相对于 process.cwd() 定义的当前工作目录进行处理
+>> - file: URL 必须是绝对路径，且只支持使用 file: 协议的 URL 对象这就意味着必须使用new URL(file\://绝对路径)
+                
+                LvHongbins-Mac-2:streamtest lvhongbin$ node
+                > process.cwd()
+                '/Users/lvhongbin/Desktop/Node_JS_Study/streamtest'
+#### 4) 读文件fs.readFile
+> - fs.readFile(path\[, options\], callback) 
+> - 异步地读取一个文件的全部内容
+> - 同步版本 fs.readFileSync(path\[, options\])
+> - 回调有两个参数 (err, data)，其中 data 是文件的内容
+> - 如果 options 是一个字符串，则它指定了字符编码和File System Flags
+>> - 'a' - Open file for appending. The file is created if it does not exist.
+>> - 'ax' - Like 'a' but fails if the path exists.
+>> - 'a+' - Open file for reading and appending. The file is created if it does not exist.
+>> - 'ax+' - Like 'a+' but fails if the path exists.
+>> - 'as' - Open file for appending in synchronous mode. The file is created if it does not exist.
+>> - 'as+' - Open file for reading and appending in synchronous mode. The file is created if it does not exist.
+>> - 'r' - Open file for reading. An exception occurs if the file does not exist.
+>> - 'r+' - Open file for reading and writing. An exception occurs if the file does not exist.
+>> - 'rs+' - Open file for reading and writing in synchronous mode. Instructs the operating system to bypass the local file system cache.
+>> - 'w' - Open file for writing. The file is created (if it does not exist) or truncated (if it exists).
+>> - 'wx' - Like 'w' but fails if the path exists.
+>> - 'w+' - Open file for reading and writing. The file is created (if it does not exist) or truncated (if it exists).
+>> - 'wx+' - Like 'w+' but fails if the path exists.
+                
+                fs.readFile('streamtest.js', 'utf8', (err, data) => {
+                  if (err) throw err;
+                  //console.log(data);
+                  console.log(data instanceof String);
+                  console.log(data instanceof ArrayBuffer);
+                  console.log(data instanceof Buffer);
+                  console.log(data instanceof string);
+                });
+> - 同步版本： fs.readFileSync()
+#### 5) 读流数据fs.read
+>fs.read(fd, buffer, offset, length, position, callback) 用流去读
+>> - fd < integer> 文件描述符
+>> - buffer < Buffer> | < Uint8Array> 一个Buffer对象，v8引擎分配的一段内存
+>> - offset < integer>
+>> - length < integer>
+>> - position < integer>
+>> - callback < Function>
+>>> - err < Error>
+>>> - bytesRead < integer>
+>>> - buffer <Buffer>
+#### 6) 写文件 fs.writeFile
+> - fs.writeFile(path\[, options\], callback)
+#### 7) 写流数据fs.read
+> - fs.write(fd, buffer, offset, length, position, callback) 用流去读
+> - fs.fsync(fd); //刷新缓冲区
+> - fs.close(fd); //关闭文件
+#### 8) 文件的监视 
+> - 返回fs.FSWatcher 对象
+> - fs.watch(filename\[, options\]\[, callback(eventType, filename)\])
+> - eventType 可以是 'rename' 或 'change'，filename 是触发事件的文件的名称。
+> - 注意，在大多数平台，当一个文件出现或消失在一个目录里时，'rename' 会被触发。
+> - options < string> | < Object>
+>> - persistent < boolean> 指明如果文件正在被监视，进程是否应该继续运行。默认 = true
+>> - recursive < boolean> 指明是否全部子目录应该被监视，或只是当前目录。 适用于当一个目录被指定时，且只在支持的平台（详见 Caveats）。默认 = false
+>> - encoding < string> 指定用于传给监听器的文件名的字符编码。默认 = 'utf8'
+#### 9) fs.Stats 类 
+> - 属性包括
+                
+                Stats {
+                  dev: 2114,
+                  ino: 48064969,
+                  mode: 33188,
+                  nlink: 1,
+                  uid: 85,
+                  gid: 100,
+                  rdev: 0,
+                  size: 527,
+                  blksize: 4096,
+                  blocks: 8,
+                  atimeMs: 1318289051000.1,
+                  mtimeMs: 1318289051000.1,
+                  ctimeMs: 1318289051000.1,
+                  birthtimeMs: 1318289051000.1,
+                  atime: Mon, 10 Oct 2011 23:24:11 GMT,
+                  mtime: Mon, 10 Oct 2011 23:24:11 GMT,
+                  ctime: Mon, 10 Oct 2011 23:24:11 GMT,
+                  birthtime: Mon, 10 Oct 2011 23:24:11 GMT }
+> - 用法
+                
+                // 文件的状态
+                fs.stat('./1.txt', (err, stats) => {
+                    if (err) throw err;
+                    console.log(`文件属性: ${JSON.stringify(stats)}`);
+                    console.log(`文件大小为：${stats.size}Byte`);
+                });                  

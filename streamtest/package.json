@@ -1,0 +1,17 @@
+{
+  "name": "streamtest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "streamtest.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "fs": "0.0.1-security",
+    "http": "0.0.0",
+    "stream": "0.0.2"
+  }
+}
