@@ -13,7 +13,7 @@
             
         
 
-   本来我是想看完ES6之后就去看React全栈技术的，发现很多东西需要Node.JS的支持，所以我还是调转方向，先去搞朴灵老师的《深入浅出node.js》后，后面再去搞React。后来发现node前面几章实在有点难度，遂先去搞React和MERN全栈了。再看Node的时候，发现正确的打开方式应该是从书的最后几章看起，一直往前看。朴灵老师的这本著作得到阿里CNode社区创始人空无的背书，质量应该不错^_ ^
+   本来我是想看完ES6之后就去看React全栈技术的，发现很多东西需要Node.JS的支持，所以我还是调转方向，先去搞朴灵老师的《深入浅出node.js》，后面再去搞React。后来发现node前面几章实在有点难度，遂先去搞React和MERN全栈了。再看Node的时候，才发现正确的打开方式应该是从书的最后几章看起，一直往前看。朴灵老师的这本著作得到阿里CNode社区创始人空无的背书，质量应该不错^_ ^
   
 ## 目录
 
@@ -33,11 +33,16 @@
 ### [4.1 简介](#4.1)
 ### [4.2 请求方法与路径解析](#4.2)   
 ### [4.3 URL中查询字符串的解析与Cookies解析](#4.3)
+### [4.4 YSlow与缓存](#4.4)
+### [4.5 Basic认证](#4.5)
+### [4.6 数据上传](#4.6)
 ## [五、相关API的使用](#5)
 ### [5.1 url](#5.1)
 ### [5.2 querystring](#5.2)
-### [5.3 stream模块](#5.3)
-### [5.4 fs模块](#5.4)
+### [5.3 stream](#5.3)
+### [5.4 fs](#5.4)
+### [5.5 Zlib](#5.5)
+### [5.6 crypto (加密)](#5.6)
           
 ------      
         
@@ -760,7 +765,7 @@
 >> - 减少Cookie的大小 一旦设置的Cookie过多，就会导致报头过大，而且大多数的cookie并不需要每次都用上，因此会造成带宽上的浪费
 >> - 为静态组件使用不同的域名，因为域名不同，就不会每次都用上相同的cookie。但是这样会牺牲DNS查询的性能和时间，好在现代的浏览器会进行DNS缓存，把这个冲突的副作用降到最低。
         
-<h3 id='4.4'>4.4 session与缓存</h3>  
+<h3 id='4.4'>4.4 YSlow与缓存</h3>  
         
 #### 1) session
 > - 由于cookie在客户端（document.cookie）和服务器端都能够被修改，所以很容易被一些坏人利用，敏感的数据都不大好放在Cookies上
@@ -768,8 +773,347 @@
 #### 2) 客户端与服务器端session的对应方式
 > - 基于Cookie来实现用户和数据的映射  cookie携带Session的口令session_id
 > - 通过查询字符串来实现浏览器端和服务器端数据的对应
+#### 3) YSlow
+> - 什么是YSlow？YSlow [1]  是Yahoo发布的一款基于FireFox的插件，这个插件可以分析网站的页面，并告诉你为了提高网站性能，如何基于某些规则而进行优化。 [--百度百科](https://baike.baidu.com/item/YSLOW/10384699?fr=aladdin)
+> - Yslow-23条规则中比较重要的几条：
+>> - 减少HTTP请求次数 合并图片、CSS、JS，改进首次访问用户等待时间
+>> - 使用CDN  就近缓存==>智能路由==>负载均衡==>WSA全站动态加速(什么是CDN？ content delivery network 内容分发网络。CDN的基本原理是广泛采用各种缓存服务器，将这些缓存服务器分布到用户访问相对集中的地区或网络中，在用户访问网站时，利用全局负载技术将用户的访问指向距离最近的工作正常的缓存服务器上，由缓存服务器直接响应用户请求。[--百度百科](https://baike.baidu.com/item/CDN/420951?fr=aladdin))
+>> - 避免空的src和href 当link标签的href属性为空、script标签的src属性为空的时候，浏览器渲染的时候会把当前页面的URL作为它们的属性值，从而把页面的内容加载进来作为它们的值
+>> - 为文件头指定Expires 使内容具有缓存性。避免了接下来的页面访问中不必要的HTTP请求
+>> - 使用gzip压缩内容 压缩任何一个文本类型的响应，包括XML和JSON
+>> - 把CSS放到顶部
+>> - 把JS放到底部
+>> - 避免使用CSS表达式
+>> - 将CSS和JS放到外部文件中。目的是缓存，但有时候为了减少请求，也会直接写到页面里，需根据PV和IP的比例权衡。
+>> - 精简CSS和JS
+>> - 避免跳转
+>> - 删除重复的JS和CSS
+>> - 配置ETags
+>> - 可缓存的AJAX
+>> - 使用GET来完成AJAX请求
+>> - 减少DOM元素数量
+>> - 避免404
+>> - 减少Cookie的大小
+>> - 使用无cookie的域
+>> - 不要使用滤镜
+>> - 不要在HTML中缩放图片
+>> - 缩小favicon.ico并缓存
+#### 4) ETags
+> - 询问有没有缓存可以使用两种方法：时间戳和ETags
+> - fs.stat.mtime.toUTCString和时间戳 然后设置请求If-Modified-Since和Last-Modified
+> - 但是使用时间戳有两个缺点：
+>> - 内容没改但是时间戳改了
+>> - 时间戳只能精确到秒，更新频繁的内容无法生效
+> - ETags 全称Entity Tag 由服务器端生成的，服务器端的可以决定他的生成规则。而且不使用时间戳 if-modified-since组合，而使用文件散列值 If-None-Match ETags组合
+#### 5) Expires和Cache-Control
+> - 其实Expires功能是可以的，但是一旦出现服务端和客户端的时间不同步的时候，就会失效
+> - 所以最好还是用Cache-Control，设置最大时间，max-age
+> - 如果在Cache-Control响应头设置了 "max-age" 或者 "s-max-age" 指令，那么 Expires 头会被忽略。
+#### 6) 清除缓存的方法
+> - 每次发布，路径中跟随Web应用的版本号；http\://url/?version=v=1234
+> - 每次发布，路径中跟随该文件内容的hash值：http\://url/?hash=1234
+#### 7) 例子
+> - cacheserver.js
+                
+                /**
+                 * 
+                 * @authors Lv Hongbin (hblvsjtu@163.com)
+                 * @date    2018-06-21 11:02:19
+                 * @version 1.0.0
+                 * @description test for stream on the server
+                 */
 
-          
+                const http = require('http');
+                const zlib = require('zlib');
+                const fs = require('fs');
+                const crypto = require('crypto');
+
+
+                // 服务端示例
+                // 对每一个请求运行 gzip 操作的成本是十分高昂的.
+                // 缓存压缩缓冲区是更加高效的方式.
+                const server = http.createServer((req, res) => {
+                    // res.write("welcome to my home!");
+
+                    // 获取所有请求头信息
+                    console.log(`Printing Header ...`);
+                    for (let prop in req.headers) {
+                        console.log(`${prop} = ${req.headers[prop]}`);
+                    }
+
+                    // 获取文件流对象
+                    const raw = fs.createReadStream('./index.html');
+                    // 允许接收的编码类型
+                    let encoding = req.headers['accept-encoding']; //这里要全小写
+                    if (!encoding) {
+                        encoding = '';
+                    }
+
+                    // 获取请求头中的修改时间
+                    let ifModifiedSince = req.headers['if-modified-since']; //这里要全小写
+
+                    if (!ifModifiedSince) {
+                        ifModifiedSince = '';
+                    }
+
+                    // 获取请求头中的if-none-match
+                    let ifNoneMatch = req.headers['if-none-match']; //这里要全小写
+
+                    const gzip = zlib.createGzip();
+                    const deflate = zlib.createDeflate();
+
+                    // 利用时间戳和if-modified-since判断是否需要缓存
+                    // 判断文件的修改时间决定是否发送
+
+                    // fs.stat('./index.html', (err, stat) => {
+                    //  // 获取文件最近一次的修改时间
+                    //  let lastModified = stat.mtime.toUTCString();
+                    //  console.log(`lastModified = ${lastModified}`);
+                    //  if (lastModified == ifModifiedSince) {
+
+                    //      // 没有过期
+                    //      res.writeHead(304, 'Not Modified');
+                    //  } else {
+
+                    //      // 已经过期
+                    //      res.setHeader('Last-Modified', lastModified);
+                    //      if (/\bdeflate\b/.test(encoding)) {
+                    //          res.writeHead(200, {
+                    //              'Content-Encoding': 'deflate'
+                    //          });
+                    //          raw.pipe(deflate).pipe(res);
+                    //      } else if (/\bgzip\b/.test(encoding)) {
+                    //          res.writeHead(200, {
+                    //              'Content-Encoding': 'gzip'
+                    //          });
+                    //          raw.pipe(gzip).pipe(res);
+                    //      } else {
+                    //          res.writeHead(200, {});
+                    //          raw.pipe(res);
+                    //      }
+                    //  }
+                    // });
+
+                    // 利用ETag和hash值判断是否需要缓存
+                    fs.readFile('./index.html', (err, fd) => {
+
+                        // 获取文件的hash值
+                        const hash = crypto.createHash('sha256');
+                        hash.update(fd);
+                        const hashsum = hash.digest('hex');
+                        console.log(`hash = ${hashsum}`);
+                        if (hashsum == ifNoneMatch) {
+
+                            // 没有过期
+                            console.log('没有过期');
+                            res.writeHead(304, 'Not Modified');
+                        } else {
+
+                            // 已经过期
+                            console.log('已经过期');
+                            const expires = new Date();
+                            expires.setTime(expires.getTime + 10 * 1000); //10秒
+                            res.setHeader('Expires', expires.toUTCString());
+                            res.setHeader('Cache-Control', 'max-age=' + 10 * 1000); //10秒
+                            res.setHeader('ETag', hashsum);
+                            if (/\bdeflate\b/.test(encoding)) {
+                                res.writeHead(200, {
+                                    'Content-Encoding': 'deflate'
+                                });
+                                raw.pipe(deflate).pipe(res);
+                            } else if (/\bgzip\b/.test(encoding)) {
+                                res.writeHead(200, {
+                                    'Content-Encoding': 'gzip'
+                                });
+                                raw.pipe(gzip).pipe(res);
+                            } else {
+                                res.writeHead(200, {});
+                                raw.pipe(res);
+                            }
+                        }
+                    })
+
+
+                    res.setTimeout(1000);
+                    res.on('timeout', () => {
+                        console.log('oh no, timeout!');
+                        res.end();
+                    });
+
+                });
+
+                server.listen(8124, () => {
+                    console.log('i am listening!');
+                });
+> - cacheclient.js
+                
+                /**
+                 * 
+                 * @authors Lv Hongbin (hblvsjtu@163.com)
+                 * @date    2018-06-21 11:02:19
+                 * @version 1.0.0
+                 * @description test for stream on the client
+                 */
+
+                const http = require('http');
+                const zlib = require('zlib');
+                const fs = require('fs');
+                const crypto = require('crypto');
+
+                fs.readFile('client/index.html', function(err, fd) {
+                    let hashsum;
+                    if (!err) {
+                        // 获取文件的hash值
+                        const hash = crypto.createHash('sha256');
+                        hash.update(fd);
+                        hashsum = hash.digest('hex');
+                    }
+                    let option = {
+                        host: '127.0.0.1',
+                        path: '/',
+                        port: 8124,
+                        headers: {
+                            'accept-encoding': 'gzip',
+                            'if-modified-since': 'Fri, 22 Jun 2018 08:36:18 GMT',
+                            'if-none-match': hashsum
+                        }
+                    }
+                    var request = http.get(option);
+                    request.on('response', (response) => {
+
+                        // 获取所有响应头信息
+                        console.log(`Printing Header ...`);
+                        for (let prop in response.headers) {
+                            console.log(`${prop} = ${response.headers[prop]}`);
+                        }
+
+                        // 获取状态码statusCode
+                        const code = response.statusCode;
+                        console.log(`statusCode = ${code}`);
+
+                        // 获取状态码ETag
+                        const etag = response.headers['etag'];
+
+                        if (code == 304) {
+
+                            // 文件没有过期，不需要更新
+                            console.log(`文件没有过期，不需要更新`);
+                        } else if (code == 200) {
+
+                            // 文件已过期，需要重新写入
+                            fs.open('example.com_index.html', 'wx', (err, fd) => {
+                                if (err) {
+                                    if (err.code === 'EEXIST') {
+                                        console.error('文件已存在');
+                                        return;
+                                    }
+                                    throw err;
+                                } else {
+                                    console.error('文件不存在，正在创建。。。');
+                                    fs.createReadStream('example.com_index.html');
+                                }
+                            })
+
+                            const output = fs.createWriteStream('example.com_index.html');
+
+                            // 判断
+                            switch (response.headers['content-encoding']) {
+                                // 或者, 只是使用 zlib.createUnzip() 方法去处理这两种情况
+                                case 'gzip':
+                                    console.log(`server encoding=zip`);
+                                    response.pipe(zlib.createUnzip()).pipe(output);
+                                    break;
+                                case 'deflate':
+                                    response.pipe(zlib.createInflate()).pipe(output);
+                                    break;
+                                default:
+                                    response.pipe(output);
+                                    break;
+                            }
+                        }
+                    });
+
+                    request.on('error', (err) => {
+                        console.log(`err: ${err}`);
+                    });
+                });
+
+        
+<h3 id='4.5'>4.5 Basic认证</h3>  
+        
+#### 1) 简介
+> - Basic是当客户端和服务器端进行请求的时候，允许通过用户名和密码实现的一种身份认证方式
+> - 需要再请求报文头中添加Authorization字段的内容
+> - Authorization字段 =username:passward【空格】encode 
+> - 所以需要使用split(' ')方法先分割出username:passward
+> - 然后再使用split(':')方法分割出username和passward
+#### 2) 缺点
+> - 虽然进过base64的加密，但是还是接近明文的传输，一般只有https协议才会使用，比较鸡肋
+        
+<h3 id='4.6'>4.6 数据上传</h3>  
+        
+#### 1) 数据下载
+> - 服务器端下载
+                
+                var chunks = [];
+                req.on('data', function(chunk) {
+                    chunks.push(chunk);
+                });
+
+                req.on('end', function() {
+                    const buf = Buffer.concat(chunks);
+                    console.log(buf.toString());
+                    console.log(`the text size = ${Buffer.byteLength(buf)} Byte`);
+                })
+> - 客户端被下载 
+                
+                var chunks = [];
+                res.on('data', function(chunk) {
+                    chunks.push(chunk);
+                });
+
+                res.on('end', function() {
+                    const buf = Buffer.concat(chunks);
+                    console.log(buf.toString());
+                    console.log(`the text size = ${Buffer.byteLength(buf)} Byte`);
+                })
+#### 2) 数据上传
+> - 服务器端上传
+                
+                res.write();
+> - 客户端被上传
+                
+                req.write();
+#### 3) 表单数据
+> - Content-Type = "application/x-www-form-urlencoded"
+#### 4) 其他格式数据
+> - JSON Content-Type = "application/json; charset=utf-8"
+> - XML Content-Type = "application/xml" 同时 var xml2js = require('xml2js');
+#### 5) 附件上传
+> - 需要指定form标签的enctype属性为"multipart/form-data"
+#### 6) 数据上传的安全问题
+> - 最大的问题是数据过大，为了避免这种情况，有两种解决的思路
+> - 限制上传的内容大小，一旦超过限制，就停止接收数据，并响应413状态码 利用Content-Length
+                    
+                let length = req.headers['Content-Length']?parseInt(req.headers['Content-Length'], 10): null;
+                if(length && length > targetLength) {
+                    res.writeHead(413);
+                    res.end();
+                }    
+> - 通过流式解析，将数据流导入到磁盘中，Node只保留文件路径等小数据
+                let chunks =[];
+                let length;
+                req.on('data', (chunk) => {
+                    length += chunk.length;
+                    if(length > targetLength) {
+
+                        // 停止接收数据，并触发end();
+                        req.destroy();
+                    }else {
+                        
+                        // 其他操作
+                    }
+                })
 ------      
         
 <h2 id='5'>五、其他API</h2>
@@ -948,12 +1292,25 @@
                 readStream.on('error', function(error){
                     console.log(error);
                 });
+
               
 <h3 id='5.4'>5.4 fs</h3>  
         
 #### 1) fs - 文件系统
 > - const fs = require('fs');
+> - 所有的外部变量都无法传入，所有的内部变量都无法传出
 > - 所有的文件系统操作都有异步和同步两种形式
+> - 创建一个文件 
+                
+                //异步地写入数据到文件，如果文件已经存在，则覆盖文件。 data 可以是字符串或 buffer。    
+                fs.writeFile('message.txt', 'Hello Node.js', (err) => {
+                  if (err) throw err;
+                  console.log('The file has been saved!');
+                });
+
+                //或者利用创建流的方法，两种方法都可以
+                fs.createReadStream('example.com_index.html');
+                fs.createWriteStream('example.com_index.html');
 #### 2) 异步操作用法
 > - 注意，异步的方法不能保证执行顺序。 所以下面的例子可能会出错，因为 fs.stat() 操作可能在 fs.rename() 操作之前完成
 > - 在繁忙的进程中，建议使用函数的异步版本。 同步的方法会阻塞整个进程，直到完成（停止所有连接）。
@@ -1224,3 +1581,185 @@
                     console.log(`你的IP地址是 ${ip}，你的源端口是 ${port}。`);
                     // consume response object
                 });
+
+              
+<h3 id='5.5'>5.5 Zlib</h3>  
+        
+#### 1) 介绍
+> - zlib模块提供通过 Gzip 和 Deflate/Inflate 实现的压缩功能，可以通过这样使用它
+                
+                const zlib = require('zlib');
+> - 压缩或者解压数据流(例如一个文件)通过zlib流将源数据流传输到目标流中来完成
+                
+                const gzip = zlib.createGzip();
+                const fs = require('fs');
+                const inp = fs.createReadStream('input.txt');
+                const out = fs.createWriteStream('input.txt.gz');
+
+                inp.pipe(gzip).pipe(out);
+
+                //或者 要求解压的是Buffer
+                const input = '.................................';
+                zlib.deflate(input, (err, buffer) => {
+                  if (!err) {
+                    console.log(buffer.toString('base64'));
+                  } else {
+                    // handle error
+                  }
+                });
+
+                const buffer = Buffer.from('eJzT0yMAAGTvBe8=', 'base64');
+                zlib.unzip(buffer, (err, buffer) => {
+                  if (!err) {
+                    console.log(buffer.toString());
+                  } else {
+                    // handle error
+                  }
+                });
+#### 2) 用于stream的相关函数 可使用pipe
+> - zlib 可以用来实现对 HTTP 中定义的 gzip 和 deflate 内容编码机制的支持。
+> - zlib.createDeflate(\[options\])
+> - zlib.createDeflateRaw(\[options\])
+> - zlib.createGunzip(\[options\])
+> - zlib.createGzip(\[options\])
+> - zlib.createInflate(\[options\])
+> - zlib.createInflateRaw(\[options\])
+> - zlib.createUnzip(\[options\])
+#### 3) 用于buffer的相关函数
+> - zlib.deflate(buffer\[, options\], callback)
+> - zlib.deflateSync(buffer\[, options\])
+> - zlib.deflateRaw(buffer\[, options\], callback)
+> - zlib.deflateRawSync(buffer\[, options\])
+> - zlib.gunzip(buffer\[, options\], callback)
+> - zlib.gunzipSync(buffer\[, options\])
+> - zlib.gzip(buffer\[, options\], callback)
+> - zlib.gzipSync(buffer\[, options\])
+> - zlib.inflate(buffer\[, options\], callback)
+> - zlib.inflateSync(buffer\[, options\])
+> - zlib.inflateRaw(buffer\[, options\], callback)
+> - zlib.inflateRawSync(buffer\[, options\])
+> - zlib.unzip(buffer\[, options\], callback)
+> - zlib.unzipSync(buffer\[, options\])
+#### 4）option
+> - flush < integer> Default: zlib.constants.Z_NO_FLUSH
+> - finishFlush < integer> Default: zlib.constants.Z_FINISH
+> - chunkSize < integer> Default: 16 * 1024
+> - windowBits < integer>
+> - level < integer> (compression only)
+> - memLevel < integer> (compression only)
+> - strategy < integer> (compression only)
+> - dictionary < Buffer> | < TypedArray> | < DataView> | < ArrayBuffer> (deflate/inflate only, empty dictionary by default)
+> - info < boolean> (If true, returns an object with buffer and engine.)
+#### 5) 例子
+> - zlibserver.js
+                
+                /**
+                 * 
+                 * @authors Lv Hongbin (hblvsjtu@163.com)
+                 * @date    2018-06-21 11:02:19
+                 * @version 1.0.0
+                 * @description test for stream on the server
+                 */
+
+                const http = require('http');
+                const zlib = require('zlib');
+                const fs = require('fs');
+
+                // 服务端示例
+                // 对每一个请求运行 gzip 操作的成本是十分高昂的.
+                // 缓存压缩缓冲区是更加高效的方式.
+                const server = http.createServer((req, res) => {
+                    // res.write("welcome to my home!");
+
+                    let encoding = req.headers['accept-encoding']; //这里要全小写
+                    if (!encoding) {
+                        encoding = '';
+                    }
+
+                    const gzip = zlib.createGzip();
+                    const deflate = zlib.createDeflate();
+                    const raw = fs.createReadStream('./index.html');
+                    if (/\bdeflate\b/.test(encoding)) {
+                        res.writeHead(200, {
+                            'Content-Encoding': 'deflate'
+                        });
+                        raw.pipe(deflate).pipe(res);
+                    } else if (/\bgzip\b/.test(encoding)) {
+                        res.writeHead(200, {
+                            'Content-Encoding': 'gzip'
+                        });
+                        raw.pipe(gzip).pipe(res);
+                    } else {
+                        res.writeHead(200, {});
+                        raw.pipe(res);
+                    }
+
+                    res.setTimeout(10000);
+                    res.on('timeout', () => {
+                        console.log('oh no, timeout!');
+                        res.end();
+                    });
+
+                });
+
+                server.listen(8124, () => {
+                    console.log('i am listening!');
+                });
+> - zlibclient.js
+                
+                /**
+                 * 
+                 * @authors Lv Hongbin (hblvsjtu@163.com)
+                 * @date    2018-06-21 11:02:19
+                 * @version 1.0.0
+                 * @description test for stream on the server
+                 */
+
+                const http = require('http');
+                const zlib = require('zlib');
+                const fs = require('fs');
+
+                const request = http.get({
+                    host: '127.0.0.1',
+                    path: '/',
+                    port: 8124,
+                    headers: {
+                        'accept-encoding': 'gzip'
+                    }
+                });
+
+                request.on('response', (response) => {
+                    const output = fs.createWriteStream('example.com_index.html');
+
+                    switch (response.headers['content-encoding']) {
+                        // 或者, 只是使用 zlib.createUnzip() 方法去处理这两种情况
+                        case 'gzip':
+                            console.log(`server encoding=zip`);
+                            response.pipe(zlib.createUnzip()).pipe(output);
+                            break;
+                        case 'deflate':
+                            response.pipe(zlib.createInflate()).pipe(output);
+                            break;
+                        default:
+                            response.pipe(output);
+                            break;
+                    }
+                });
+
+                request.on('error', (err) => {
+                    console.log(`err: ${err}`);
+                });
+
+              
+<h3 id='5.6'>5.6 crypto (加密)</h3>  
+        
+#### 1) 介绍
+> - crypto 模块提供了加密功能，包含对 OpenSSL 的哈希、HMAC、加密、解密、签名、以及验证功能的一整套封装。
+> - 使用 require('crypto') 来访问该模块。
+> - 最简单的使用方法
+                    
+                // 获取文件的hash值
+                const hash = crypto.createHash('sha256');
+                hash.update(fd);
+                const hashsum = hash.digest('hex');
+                console.log(`hash = ${hashsum}`);
