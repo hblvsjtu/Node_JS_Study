@@ -33,11 +33,16 @@
 ### [4.1 简介](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#4.1)
 ### [4.2 请求方法与路径解析](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#4.2)   
 ### [4.3 URL中查询字符串的解析与Cookies解析](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#4.3)
+### [4.4 YSlow与缓存](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#4.4)
+### [4.5 Basic认证](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#4.5)
+### [4.6 数据上传](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#4.6)
 ## [五、相关API的使用](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#5)
 ### [5.1 url](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#5.1)
 ### [5.2 querystring](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#5.2)
 ### [5.3 stream模块](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#5.3)
-### [5.4 fs模块](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md5.4)
+### [5.4 fs模块](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#5.4)
+### [5.5 Zlib](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#5.5)
+### [5.6 crypto (加密)](https://github.com/hblvsjtu/Node_JS_Study/blob/master/Node_JS_Study.md#5.6)
           
 ------      
         
